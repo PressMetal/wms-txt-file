@@ -110,7 +110,11 @@
         // Initialize Scanner
         let html5QrcodeScanner = new Html5QrcodeScanner(
             "reader",
-            { fps: 10, qrbox: {width: 250, height: 250} },
+            { 
+                fps: 10, 
+                qrbox: {width: 250, height: 250},
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+            },
             false);
         html5QrcodeScanner.render(onScanSuccess, function(){});
 
@@ -124,10 +128,7 @@
         // Generate and Download TXT
         document.getElementById('download-txt').addEventListener('click', function() {
             if (scannedDataList.length === 0) return;
-            let textContent = "Batch QR Scan Results\n=======================\n\n";
-            scannedDataList.forEach((item, index) => {
-                textContent += `Scan ${index + 1}:\nData: ${item.data}\nTime: ${item.timestamp}\n\n`;
-            });
+            let textContent = scannedDataList.map(item => item.data).join("\n");
             const blob = new Blob([textContent], { type: "text/plain" });
             triggerDownload(blob, "scanned_batch.txt");
         });
