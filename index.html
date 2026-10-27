@@ -24,8 +24,13 @@
         button { padding: 12px 20px; font-size: 16px; font-weight: bold; color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%; }
         #download-json { background: #007bff; }
         #download-txt { background: #28a745; }
+        #clear-btn { background: #dc3545; }
+        #capture-btn { background: #ff9800; transition: opacity 0.3s; }
+        #capture-btn:disabled { cursor: not-allowed; opacity: 0.5; }
         button:active { opacity: 0.8; }
-        p#scanned-text { word-break: break-all; font-family: monospace; background: #f8f9fa; padding: 10px; border-radius: 6px; }
+        ul#scanned-list { list-style-type: none; padding: 0; margin: 0; text-align: left; max-height: 200px; overflow-y: auto; }
+        ul#scanned-list li { word-break: break-all; font-family: monospace; background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid #007bff; }
+        .timestamp { font-size: 0.8em; color: #666; display: block; margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -34,26 +39,64 @@
     
     <div id="reader"></div>
 
+    <div id="capture-container" style="margin-top: 20px; padding: 15px; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <h3 style="margin-top: 0; font-size: 1.2em;">Live Detection</h3>
+        <p id="live-scan-text" style="font-family: monospace; word-break: break-all; color: #555; font-size: 1.1em; min-height: 24px;">Waiting for QR...</p>
+        <button id="capture-btn" disabled>Capture to List</button>
+    </div>
+
     <div id="result-container">
         <h3>Scanned Data:</h3>
-        <p id="scanned-text"></p>
+        <ul id="scanned-list"></ul>
         <div class="btn-group">
-            <button id="download-json">Save as JSON</button>
-            <button id="download-txt">Save as TXT</button>
+            <button id="download-json">Save All as JSON</button>
+            <button id="download-txt">Save All as TXT</button>
+            <button id="clear-btn">Clear Scans</button>
         </div>
     </div>
 
     <script>
-        let currentScannedData = "";
+        let scannedDataList = [];
+        let currentLiveScan = "";
+        let clearScanTimeout;
 
-        // Handle successful scan
+        // Handle successful scan (Live Detection)
         function onScanSuccess(decodedText) {
-            currentScannedData = decodedText;
-            document.getElementById('scanned-text').innerText = decodedText;
-            document.getElementById('result-container').style.display = "block";
-            // Optional: Vibrate device on scan (works on some mobile browsers)
-            if (navigator.vibrate) navigator.vibrate(200); 
+            currentLiveScan = decodedText;
+            document.getElementById('live-scan-text').innerText = decodedText;
+            document.getElementById('capture-btn').disabled = false;
+            
+            // Keep detection active, but clear it if we point the camera away for 2 seconds
+            clearTimeout(clearScanTimeout);
+            clearScanTimeout = setTimeout(() => {
+                currentLiveScan = "";
+                document.getElementById('live-scan-text').innerText = "Waiting for QR...";
+                document.getElementById('capture-btn').disabled = true;
+            }, 2000);
         }
+
+        // New Capture Button Logic
+        document.getElementById('capture-btn').addEventListener('click', function() {
+            if (!currentLiveScan) return;
+            
+            const timestamp = new Date().toLocaleString();
+            scannedDataList.push({ data: currentLiveScan, timestamp: timestamp });
+            
+            const listElement = document.getElementById('scanned-list');
+            const li = document.createElement('li');
+            li.innerHTML = `<strong>Data:</strong> ${currentLiveScan} <span class="timestamp">${timestamp}</span>`;
+            listElement.appendChild(li);
+            
+            document.getElementById('result-container').style.display = "block";
+            
+            // Optional: Vibrate device on scan
+            if (navigator.vibrate) navigator.vibrate(200); 
+
+            // Reset after capture
+            currentLiveScan = "";
+            document.getElementById('live-scan-text').innerText = "Saved to list!";
+            this.disabled = true;
+        });
 
         // Initialize Scanner
         let html5QrcodeScanner = new Html5QrcodeScanner(
@@ -64,18 +107,30 @@
 
         // Generate and Download JSON
         document.getElementById('download-json').addEventListener('click', function() {
-            if (!currentScannedData) return;
-            const dataObj = { data: currentScannedData, timestamp: new Date().toLocaleString() };
-            const blob = new Blob([JSON.stringify(dataObj, null, 2)], { type: "application/json" });
-            triggerDownload(blob, "scan.json");
+            if (scannedDataList.length === 0) return;
+            const blob = new Blob([JSON.stringify(scannedDataList, null, 2)], { type: "application/json" });
+            triggerDownload(blob, "scanned_batch.json");
         });
 
         // Generate and Download TXT
         document.getElementById('download-txt').addEventListener('click', function() {
-            if (!currentScannedData) return;
-            const textContent = `Scanned Data: ${currentScannedData}\nTime: ${new Date().toLocaleString()}\n`;
+            if (scannedDataList.length === 0) return;
+            let textContent = "Batch QR Scan Results\n=======================\n\n";
+            scannedDataList.forEach((item, index) => {
+                textContent += `Scan ${index + 1}:\nData: ${item.data}\nTime: ${item.timestamp}\n\n`;
+            });
             const blob = new Blob([textContent], { type: "text/plain" });
-            triggerDownload(blob, "scan.txt");
+            triggerDownload(blob, "scanned_batch.txt");
+        });
+        
+        // Clear Scans
+        document.getElementById('clear-btn').addEventListener('click', function() {
+            scannedDataList = [];
+            document.getElementById('scanned-list').innerHTML = "";
+            document.getElementById('result-container').style.display = "none";
+            currentLiveScan = "";
+            document.getElementById('live-scan-text').innerText = "Waiting for QR...";
+            document.getElementById('capture-btn').disabled = true;
         });
 
         // Helper function for downloading files
