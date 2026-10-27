@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Press Metal Stock Take</title>
+    <title>Offline QR Scanner</title>
     
     <!-- PWA iOS Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Press Metal Stock Take">
+    <meta name="apple-mobile-web-app-title" content="QR Scanner">
     
     <!-- PWA Manifest embedded directly -->
     <link rel="manifest" href='data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Offline%20QR%20Scanner%22%2C%22short_name%22%3A%22QR%20Scanner%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23f4f4f9%22%2C%22theme_color%22%3A%22%23007bff%22%7D'>
@@ -35,14 +35,14 @@
 </head>
 <body>
 
-    <h2>Press Metal Stock Take</h2>
+    <h2>QR Code Scanner</h2>
     
     <div id="reader"></div>
 
     <div id="capture-container" style="margin-top: 20px; padding: 15px; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
         <h3 style="margin-top: 0; font-size: 1.2em;">Live Detection</h3>
         <p id="live-scan-text" style="font-family: monospace; word-break: break-all; color: #555; font-size: 1.1em; min-height: 24px;">Waiting for QR...</p>
-        <button id="capture-btn" disabled>Capture</button>
+        <button id="capture-btn" disabled>Capture to List</button>
     </div>
 
     <div id="result-container">
@@ -89,12 +89,16 @@
             
             const scanNumber = scannedDataList.length + 1;
             const timestamp = new Date().toLocaleString();
-            scannedDataList.push({ id: scanNumber, data: currentLiveScan, timestamp: timestamp });
+            
+            // Add to the beginning of the array so exports are also descending
+            scannedDataList.unshift({ id: scanNumber, data: currentLiveScan, timestamp: timestamp });
             
             const listElement = document.getElementById('scanned-list');
             const li = document.createElement('li');
             li.innerHTML = `<div style="font-size: 0.85em; font-weight: bold; color: #007bff; margin-bottom: 4px; text-transform: uppercase;">Scan #${scanNumber}</div><strong>Data:</strong> ${currentLiveScan} <span class="timestamp">${timestamp}</span>`;
-            listElement.appendChild(li);
+            
+            // Prepend adds the new item to the TOP of the visual list
+            listElement.prepend(li);
             
             document.getElementById('result-container').style.display = "block";
             
