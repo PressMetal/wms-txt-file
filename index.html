@@ -79,12 +79,21 @@
         document.getElementById('capture-btn').addEventListener('click', function() {
             if (!currentLiveScan) return;
             
+            // Check for duplicates before saving
+            const isDuplicate = scannedDataList.some(item => item.data === currentLiveScan);
+            if (isDuplicate) {
+                document.getElementById('live-scan-text').innerHTML = `<span style="color: #dc3545; font-weight: bold;">Duplicate QR ignored!</span>`;
+                if (navigator.vibrate) navigator.vibrate([50, 100, 50]); // Error vibration pattern
+                return; // Stop here, do not add to list
+            }
+            
+            const scanNumber = scannedDataList.length + 1;
             const timestamp = new Date().toLocaleString();
-            scannedDataList.push({ data: currentLiveScan, timestamp: timestamp });
+            scannedDataList.push({ id: scanNumber, data: currentLiveScan, timestamp: timestamp });
             
             const listElement = document.getElementById('scanned-list');
             const li = document.createElement('li');
-            li.innerHTML = `<strong>Data:</strong> ${currentLiveScan} <span class="timestamp">${timestamp}</span>`;
+            li.innerHTML = `<div style="font-size: 0.85em; font-weight: bold; color: #007bff; margin-bottom: 4px; text-transform: uppercase;">Scan #${scanNumber}</div><strong>Data:</strong> ${currentLiveScan} <span class="timestamp">${timestamp}</span>`;
             listElement.appendChild(li);
             
             document.getElementById('result-container').style.display = "block";
