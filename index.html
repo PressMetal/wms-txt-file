@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Press Metal Stock Take</title>
+    <title>Offline QR Scanner</title>
     
     <!-- PWA iOS Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Press Metal Stock Take">
+    <meta name="apple-mobile-web-app-title" content="QR Scanner">
     
     <!-- PWA Manifest embedded directly -->
     <link rel="manifest" href='data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Offline%20QR%20Scanner%22%2C%22short_name%22%3A%22QR%20Scanner%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23f4f4f9%22%2C%22theme_color%22%3A%22%23007bff%22%7D'>
@@ -18,7 +18,7 @@
     
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; padding: 20px; background: #f4f4f9; margin: 0; padding-top: 40px; }
-        #reader { width: 100%; max-width: 300px; margin: 0 auto; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 12px; overflow: hidden; }
+        #reader { width: 100%; max-width: 320px; margin: 0 auto; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 12px; overflow: hidden; }
         #result-container { margin-top: 20px; padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: none; }
         .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
         #filename-input { padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; width: 100%; box-sizing: border-box; font-family: inherit; }
@@ -36,23 +36,30 @@
 </head>
 <body>
 
-    <h2>Press Metal Stock Take</h2>
+    <h2>QR Code Scanner</h2>
     
     <div id="reader"></div>
 
     <div id="capture-container" style="margin-top: 20px; padding: 15px; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
         <h3 style="margin-top: 0; font-size: 1.2em;">Live Detection</h3>
         <p id="live-scan-text" style="font-family: monospace; word-break: break-all; color: #555; font-size: 1.1em; min-height: 24px;">Waiting for QR...</p>
-        <button id="capture-btn" disabled>Capture to List</button>
+        <button id="capture-btn" disabled>Capture</button>
+    </div>
+
+    <div id="handheld-container" style="margin-top: 20px; padding: 15px; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <h3 style="margin-top: 0; font-size: 1.2em;">Handheld Scanner</h3>
+        <p style="font-size: 0.85em; color: #666; margin-top: 0; margin-bottom: 10px;">Tap the box below to use a physical barcode scanner.</p>
+        <input type="text" id="manual-scan-input" placeholder="Scan barcode here..." autocomplete="off" style="padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; width: 100%; box-sizing: border-box; font-family: inherit;">
+        <div id="handheld-status" style="margin-top: 8px; font-size: 0.9em; min-height: 18px;"></div>
     </div>
 
     <div id="result-container">
-        <h3>Scanned List:</h3>
+        <h3>Scanned Data:</h3>
         <ul id="scanned-list"></ul>
         <div class="btn-group">
-            <input type="text" id="filename-input" placeholder="Save As (optional)">
-            <!-- <button id="download-json">Save All as JSON</button> -->
-             <button id="download-txt">Save All as TXT</button>
+            <input type="text" id="filename-input" placeholder="Enter custom file name (optional)">
+            <button id="download-json">Save All as JSON</button>
+            <button id="download-txt">Save All as TXT</button>
             <button id="clear-btn">Clear Scans</button>
         </div>
     </div>
@@ -78,26 +85,28 @@
         }
 
         // New Capture Button Logic
-        document.getElementById('capture-btn').addEventListener('click', function() {
-            if (!currentLiveScan) return;
+        
+        // Helper function to process and save a scan (used by both Camera and Handheld)
+        function saveScanData(scanString, statusElementId) {
+            if (!scanString) return false;
             
             // Check for duplicates before saving
-            const isDuplicate = scannedDataList.some(item => item.data === currentLiveScan);
+            const isDuplicate = scannedDataList.some(item => item.data === scanString);
             if (isDuplicate) {
-                document.getElementById('live-scan-text').innerHTML = `<span style="color: #dc3545; font-weight: bold;">Duplicate QR Detected</span>`;
+                document.getElementById(statusElementId).innerHTML = `<span style="color: #dc3545; font-weight: bold;">Duplicate QR Detected</span>`;
                 if (navigator.vibrate) navigator.vibrate([50, 100, 50]); // Error vibration pattern
-                return; // Stop here, do not add to list
+                return false;
             }
             
             const scanNumber = scannedDataList.length + 1;
             const timestamp = new Date().toLocaleString();
             
             // Add to the beginning of the array so exports are also descending
-            scannedDataList.unshift({ id: scanNumber, data: currentLiveScan, timestamp: timestamp });
+            scannedDataList.unshift({ id: scanNumber, data: scanString, timestamp: timestamp });
             
             const listElement = document.getElementById('scanned-list');
             const li = document.createElement('li');
-            li.innerHTML = `<div style="font-size: 0.85em; font-weight: bold; color: #007bff; margin-bottom: 4px; text-transform: uppercase;">Scan #${scanNumber}</div><strong>Data:</strong> ${currentLiveScan} <span class="timestamp">${timestamp}</span>`;
+            li.innerHTML = `<div style="font-size: 0.85em; font-weight: bold; color: #007bff; margin-bottom: 4px; text-transform: uppercase;">Scan #${scanNumber}</div><strong>Data:</strong> ${scanString} <span class="timestamp">${timestamp}</span>`;
             
             // Prepend adds the new item to the TOP of the visual list
             listElement.prepend(li);
@@ -107,10 +116,44 @@
             // Optional: Vibrate device on scan
             if (navigator.vibrate) navigator.vibrate(200); 
 
-            // Reset after capture
-            currentLiveScan = "";
-            document.getElementById('live-scan-text').innerText = "Saved to list!";
-            this.disabled = true;
+            return true;
+        }
+
+        // Triggered when clicking the orange Capture button (Camera)
+        document.getElementById('capture-btn').addEventListener('click', function() {
+            if (!currentLiveScan) return;
+            
+            const success = saveScanData(currentLiveScan, 'live-scan-text');
+            if (success) {
+                // Reset after successful capture
+                currentLiveScan = "";
+                document.getElementById('live-scan-text').innerHTML = `<span style="color: #28a745; font-weight: bold;">Saved to list!</span>`;
+                this.disabled = true;
+            }
+        });
+
+        // Triggered by Handheld Scanner (Pressing Enter)
+        document.getElementById('manual-scan-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Prevent default form submission behaviors
+                const scanVal = this.value.trim();
+                
+                if (scanVal) {
+                    const success = saveScanData(scanVal, 'handheld-status');
+                    if (success) {
+                        document.getElementById('handheld-status').innerHTML = `<span style="color: #28a745; font-weight: bold;">Saved to list!</span>`;
+                        // Clear the success message after 2 seconds
+                        setTimeout(() => {
+                            if (document.getElementById('handheld-status').innerText === "Saved to list!") {
+                                document.getElementById('handheld-status').innerText = "";
+                            }
+                        }, 2000);
+                    }
+                }
+                
+                this.value = ''; // Instantly clear the box for the next scan
+                this.focus(); // Keep the cursor in the box
+            }
         });
 
         // Initialize Scanner
@@ -118,7 +161,7 @@
             "reader",
             { 
                 fps: 10, 
-                qrbox: {width: 250, height: 250},
+                qrbox: {width: 200, height: 200},
                 supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
             },
             false);
