@@ -13,8 +13,8 @@
     <!-- PWA Manifest embedded directly -->
     <link rel="manifest" href='data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Offline%20QR%20Scanner%22%2C%22short_name%22%3A%22QR%20Scanner%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23f4f4f9%22%2C%22theme_color%22%3A%22%23007bff%22%7D'>
     
-    <!-- Load Library via CDN -->
-    <script src="https://unpkg.com/html5-qrcode/html5-qrcode.min.js"></script>
+    <!-- Load Library Locally for 100% Offline Support -->
+    <script src="html5-qrcode.min.js"></script>
     
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; padding: 20px; background: #f4f4f9; margin: 0; padding-top: 40px; }
@@ -23,7 +23,6 @@
         .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
         #filename-input { padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; width: 100%; box-sizing: border-box; font-family: inherit; }
         button { padding: 12px 20px; font-size: 16px; font-weight: bold; color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%; }
-        #download-json { background: #007bff; }
         #download-txt { background: #28a745; }
         #clear-btn { background: #dc3545; }
         #capture-btn { background: #ff9800; transition: opacity 0.3s; }
@@ -58,7 +57,6 @@
         <ul id="scanned-list"></ul>
         <div class="btn-group">
             <input type="text" id="filename-input" placeholder="Enter custom file name (optional)">
-            <button id="download-json">Save All as JSON</button>
             <button id="download-txt">Save All as TXT</button>
             <button id="clear-btn">Clear Scans</button>
         </div>
@@ -167,18 +165,6 @@
             false);
         html5QrcodeScanner.render(onScanSuccess, function(){});
 
-        // Generate and Download JSON
-        document.getElementById('download-json').addEventListener('click', function() {
-            if (scannedDataList.length === 0) return;
-            
-            let filename = document.getElementById('filename-input').value.trim();
-            if (!filename) filename = "scanned_batch";
-            if (!filename.toLowerCase().endsWith(".json")) filename += ".json";
-            
-            const blob = new Blob([JSON.stringify(scannedDataList, null, 2)], { type: "application/json" });
-            triggerDownload(blob, filename);
-        });
-
         // Generate and Download TXT
         document.getElementById('download-txt').addEventListener('click', function() {
             if (scannedDataList.length === 0) return;
@@ -217,8 +203,8 @@
         // PWA Service Worker Registration (Embedded)
         if ('serviceWorker' in navigator) {
             const swCode = `
-                const CACHE_NAME = 'qr-cache-v1';
-                self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(['./', './index.html', 'https://unpkg.com/html5-qrcode/html5-qrcode.min.js']))));
+                const CACHE_NAME = 'qr-cache-v2';
+                self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(['./', './index.html', './html5-qrcode.min.js']))));
                 self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
             `;
             const swBlob = new Blob([swCode], {type: 'application/javascript'});
