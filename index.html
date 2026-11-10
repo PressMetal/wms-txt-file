@@ -13,8 +13,8 @@
     <!-- PWA Manifest embedded directly -->
     <link rel="manifest" href='data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Offline%20QR%20Scanner%22%2C%22short_name%22%3A%22QR%20Scanner%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23f4f4f9%22%2C%22theme_color%22%3A%22%23007bff%22%7D'>
     
-    <!-- Load Library Locally for 100% Offline Support -->
-    <script src="html5-qrcode.min.js"></script>
+    <!-- Load Library via CDN for Preview to work (Caches offline via Service Worker) -->
+    <script src="https://unpkg.com/html5-qrcode/html5-qrcode.min.js"></script>
     
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; padding: 20px; background: #f4f4f9; margin: 0; padding-top: 40px; }
@@ -31,11 +31,40 @@
         ul#scanned-list { list-style-type: none; padding: 0; margin: 0; text-align: left; max-height: 200px; overflow-y: auto; }
         ul#scanned-list li { word-break: break-all; font-family: monospace; background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid #007bff; }
         .timestamp { font-size: 0.8em; color: #666; display: block; margin-top: 4px; }
+        .setup-select { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; width: 100%; box-sizing: border-box; font-family: inherit; margin-bottom: 12px; margin-top: 5px; background: #fff;}
     </style>
 </head>
 <body>
 
     <h2>QR Code Scanner</h2>
+
+    <div id="setup-container" style="margin-top: 10px; margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: left; max-width: 500px; margin-left: auto; margin-right: auto;">
+        <h3 style="margin-top: 0; font-size: 1.2em; text-align: center;">Scan Settings</h3>
+        
+        <label for="user-input" style="font-weight: bold; font-size: 0.9em;">User:</label>
+        <input type="text" id="user-input" class="setup-select" placeholder="Enter username..." autocomplete="off">
+        
+        <label for="location-select" style="font-weight: bold; font-size: 0.9em;">Location:</label>
+        <select id="location-select" class="setup-select">
+            <option value="Location A">Location A</option>
+            <option value="Location B">Location B</option>
+            <option value="Location C">Location C</option>
+        </select>
+        
+        <label for="zone-select" style="font-weight: bold; font-size: 0.9em;">Zone:</label>
+        <select id="zone-select" class="setup-select">
+            <option value="Zone 1">Zone 1</option>
+            <option value="Zone 2">Zone 2</option>
+            <option value="Zone 3">Zone 3</option>
+        </select>
+        
+        <label for="session-select" style="font-weight: bold; font-size: 0.9em;">Session:</label>
+        <select id="session-select" class="setup-select" style="margin-bottom: 0;">
+            <option value="Morning">Morning</option>
+            <option value="Afternoon">Afternoon</option>
+            <option value="Evening">Evening</option>
+        </select>
+    </div>
     
     <div id="reader"></div>
 
@@ -109,14 +138,30 @@
             }
             
             const scanNumber = scannedDataList.length + 1;
-            const timestamp = new Date().toLocaleString();
+            // Remove comma from timestamp to prevent CSV splitting issues
+            const timestamp = new Date().toLocaleString().replace(',', '');
+            
+            const user = document.getElementById('user-input').value.trim() || "Unknown";
+            const location = document.getElementById('location-select').value;
+            const zone = document.getElementById('zone-select').value;
+            const session = document.getElementById('session-select').value;
             
             // Add to the beginning of the array so exports are also descending
-            scannedDataList.unshift({ id: scanNumber, data: scanString, timestamp: timestamp });
+            scannedDataList.unshift({ 
+                id: scanNumber, 
+                data: scanString, 
+                user: user,
+                location: location,
+                zone: zone,
+                session: session,
+                timestamp: timestamp 
+            });
             
             const listElement = document.getElementById('scanned-list');
             const li = document.createElement('li');
-            li.innerHTML = `<div style="font-size: 0.85em; font-weight: bold; color: #007bff; margin-bottom: 4px; text-transform: uppercase;">Scan #${scanNumber}</div><strong>Data:</strong> ${scanString} <span class="timestamp">${timestamp}</span>`;
+            li.innerHTML = `<div style="font-size: 0.85em; font-weight: bold; color: #007bff; margin-bottom: 4px; text-transform: uppercase;">Scan #${scanNumber}</div>
+            <div style="font-size: 0.8em; color: #555; margin-bottom: 4px; background: #e9ecef; padding: 4px 8px; border-radius: 4px; display: inline-block;">👤 ${user} | 📍 ${location} | 🏢 ${zone} | 🕒 ${session}</div><br>
+            <strong>Data:</strong> ${scanString} <span class="timestamp">${timestamp}</span>`;
             
             // Prepend adds the new item to the TOP of the visual list
             listElement.prepend(li);
@@ -185,7 +230,9 @@
             if (!filename) filename = "scanned_batch";
             if (!filename.toLowerCase().endsWith(".txt")) filename += ".txt";
             
-            let textContent = scannedDataList.map(item => item.data).join("\n");
+            // Format: timestamp, ScannedData, User, Location, Zone, Session
+            let textContent = scannedDataList.map(item => `${item.timestamp},${item.data},${item.user},${item.location},${item.zone},${item.session}`).join("\n");
+            
             const blob = new Blob([textContent], { type: "text/plain" });
             triggerDownload(blob, filename);
         });
@@ -226,8 +273,8 @@
         // PWA Service Worker Registration (Embedded)
         if ('serviceWorker' in navigator) {
             const swCode = `
-                const CACHE_NAME = 'qr-cache-v2';
-                self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(['./', './index.html', './html5-qrcode.min.js']))));
+                const CACHE_NAME = 'qr-cache-v3';
+                self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(['./', './index.html', 'https://unpkg.com/html5-qrcode/html5-qrcode.min.js']))));
                 self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
             `;
             const swBlob = new Blob([swCode], {type: 'application/javascript'});
