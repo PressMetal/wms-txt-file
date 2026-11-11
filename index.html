@@ -38,67 +38,87 @@
 
     <h2>QR Code Scanner</h2>
 
-    <div id="setup-container" style="margin-top: 10px; margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: left; max-width: 500px; margin-left: auto; margin-right: auto;">
-        <h3 style="margin-top: 0; font-size: 1.2em; text-align: center;">Scan Settings</h3>
-        
-        <label for="user-input" style="font-weight: bold; font-size: 0.9em;">User:</label>
-        <input type="text" id="user-input" class="setup-select" placeholder="Enter username..." autocomplete="off">
-        
-        <label for="location-select" style="font-weight: bold; font-size: 0.9em;">Location:</label>
-        <select id="location-select" class="setup-select">
-            <option value="Location A">Location A</option>
-            <option value="Location B">Location B</option>
-            <option value="Location C">Location C</option>
-        </select>
-        
-        <label for="zone-select" style="font-weight: bold; font-size: 0.9em;">Zone:</label>
-        <select id="zone-select" class="setup-select">
-            <option value="Zone 1">Zone 1</option>
-            <option value="Zone 2">Zone 2</option>
-            <option value="Zone 3">Zone 3</option>
-        </select>
-        
-        <label for="session-select" style="font-weight: bold; font-size: 0.9em;">Session:</label>
-        <select id="session-select" class="setup-select" style="margin-bottom: 0;">
-            <option value="Morning">Morning</option>
-            <option value="Afternoon">Afternoon</option>
-            <option value="Evening">Evening</option>
-        </select>
-    </div>
-    
-    <div id="reader"></div>
+    <!-- STEP 1: SETUP -->
+    <div id="step-setup">
+        <div id="setup-container" style="margin-top: 10px; margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: left; max-width: 500px; margin-left: auto; margin-right: auto;">
+            <h3 style="margin-top: 0; font-size: 1.2em; text-align: center;">Scan Settings</h3>
+            
+            <label for="user-input" style="font-weight: bold; font-size: 0.9em;">User:</label>
+            <input type="text" id="user-input" class="setup-select" placeholder="Enter username..." autocomplete="off">
+            
+            <label for="location-select" style="font-weight: bold; font-size: 0.9em;">Location:</label>
+            <select id="location-select" class="setup-select">
+                <option value="Location A">Location A</option>
+                <option value="Location B">Location B</option>
+                <option value="Location C">Location C</option>
+            </select>
+            
+            <label for="zone-select" style="font-weight: bold; font-size: 0.9em;">Zone:</label>
+            <select id="zone-select" class="setup-select">
+                <option value="Zone 1">Zone 1</option>
+                <option value="Zone 2">Zone 2</option>
+                <option value="Zone 3">Zone 3</option>
+            </select>
+            
+            <label for="session-select" style="font-weight: bold; font-size: 0.9em;">Session:</label>
+            <select id="session-select" class="setup-select" style="margin-bottom: 0;">
+                <option value="Morning">Morning</option>
+                <option value="Afternoon">Afternoon</option>
+                <option value="Evening">Evening</option>
+            </select>
+        </div>
 
-    <div id="capture-container" style="margin-top: 20px; padding: 15px; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-        <h3 style="margin-top: 0; font-size: 1.2em;">Live Detection</h3>
-        <p id="live-scan-text" style="font-family: monospace; word-break: break-all; color: #555; font-size: 1.1em; min-height: 24px;">Waiting for QR...</p>
-        <button id="capture-btn" disabled>Capture</button>
-    </div>
-
-    <div id="handheld-container" style="margin-top: 20px; padding: 15px; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-        <h3 style="margin-top: 0; font-size: 1.2em;">Handheld Scanner</h3>
-        <p style="font-size: 0.85em; color: #666; margin-top: 0; margin-bottom: 10px;">Tap the box below to use a physical barcode scanner.</p>
-        <input type="text" id="manual-scan-input" placeholder="Scan barcode here..." autocomplete="off" style="padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; width: 100%; box-sizing: border-box; font-family: inherit;">
-        <div id="handheld-status" style="margin-top: 8px; font-size: 0.9em; min-height: 18px;"></div>
-    </div>
-
-    <div id="result-container">
-        <h3>Scanned Data:</h3>
-        <ul id="scanned-list"></ul>
-        <div class="btn-group">
-            <input type="text" id="filename-input" placeholder="Enter custom file name (optional)">
-            <button id="download-txt">Save All as TXT</button>
-            <button id="clear-btn">Clear Scans</button>
+        <div style="max-width: 500px; margin: 0 auto;">
+            <h3 style="text-align: center; margin-bottom: 15px;">Select Scan Mode</h3>
+            <button id="btn-mode-camera" style="background: #17a2b8; margin-bottom: 15px;">📸 Use Camera</button>
+            <button id="btn-mode-handheld" style="background: #6f42c1;">📳 Use Handheld Scanner</button>
         </div>
     </div>
 
-    <!-- Custom Confirmation Modal -->
-    <div id="confirm-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; justify-content: center; align-items: center;">
-        <div style="background: #fff; padding: 20px; border-radius: 12px; width: 80%; max-width: 300px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-            <h3 style="margin-top: 0; font-size: 1.2em;">Clear all scans?</h3>
-            <p style="color: #666; font-size: 0.9em;">This action cannot be undone.</p>
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button id="cancel-clear" style="background: #6c757d; margin-top: 0;">Cancel</button>
-                <button id="confirm-clear" style="background: #dc3545; margin-top: 0;">Yes, Clear</button>
+    <!-- STEP 2: SCANNING -->
+    <div id="step-scan" style="display: none;">
+        <div style="max-width: 500px; margin: 0 auto; text-align: left;">
+            <button id="btn-back-setup" style="background: #6c757d; margin-bottom: 20px; width: auto; padding: 8px 16px; font-size: 14px;">⬅ Back to Settings</button>
+        </div>
+
+        <div id="camera-section">
+            <div id="reader"></div>
+
+            <div id="capture-container" style="margin-top: 20px; padding: 15px; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <h3 style="margin-top: 0; font-size: 1.2em;">Live Detection</h3>
+                <p id="live-scan-text" style="font-family: monospace; word-break: break-all; color: #555; font-size: 1.1em; min-height: 24px;">Waiting for QR...</p>
+                <button id="capture-btn" disabled>Capture</button>
+            </div>
+        </div>
+
+        <div id="handheld-section" style="display: none;">
+            <div id="handheld-container" style="margin-top: 20px; padding: 15px; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <h3 style="margin-top: 0; font-size: 1.2em;">Handheld Scanner</h3>
+                <p style="font-size: 0.85em; color: #666; margin-top: 0; margin-bottom: 10px;">Tap the box below to use a physical barcode scanner.</p>
+                <input type="text" id="manual-scan-input" placeholder="Scan barcode here..." autocomplete="off" style="padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; width: 100%; box-sizing: border-box; font-family: inherit;">
+                <div id="handheld-status" style="margin-top: 8px; font-size: 0.9em; min-height: 18px;"></div>
+            </div>
+        </div>
+
+        <div id="result-container">
+            <h3>Scanned Data:</h3>
+            <ul id="scanned-list"></ul>
+            <div class="btn-group">
+                <input type="text" id="filename-input" placeholder="Enter file name (optional)" autocomplete="off">
+                <button id="download-txt">Save All as TXT</button>
+                <button id="clear-btn">Clear Scans</button>
+            </div>
+        </div>
+    </div> <!-- Close step-scan -->
+
+    <!-- Confirm Clear Modal -->
+    <div id="confirm-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999;">
+        <div style="background: white; padding: 25px; border-radius: 12px; width: 80%; max-width: 300px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+            <h3 style="margin-top: 0; color: #dc3545;">Confirm Clear</h3>
+            <p style="color: #555; font-size: 0.9em; margin-bottom: 20px;">Are you sure you want to permanently delete all scans in the list?</p>
+            <div style="display: flex; gap: 10px;">
+                <button id="cancel-clear" style="background: #6c757d; flex: 1;">Cancel</button>
+                <button id="confirm-clear" style="background: #dc3545; flex: 1;">Clear</button>
             </div>
         </div>
     </div>
@@ -211,16 +231,51 @@
             }
         });
 
-        // Initialize Scanner
-        let html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader",
-            { 
-                fps: 10, 
-                qrbox: {width: 200, height: 200},
-                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-            },
-            false);
-        html5QrcodeScanner.render(onScanSuccess, function(){});
+        // UI View Switching Logic
+        const stepSetup = document.getElementById('step-setup');
+        const stepScan = document.getElementById('step-scan');
+        const cameraSection = document.getElementById('camera-section');
+        const handheldSection = document.getElementById('handheld-section');
+        
+        let cameraRendered = false;
+
+        document.getElementById('btn-mode-camera').addEventListener('click', function() {
+            stepSetup.style.display = "none";
+            stepScan.style.display = "block";
+            cameraSection.style.display = "block";
+            handheldSection.style.display = "none";
+            
+            // Initialize Camera Scanner only when needed to save resources
+            if (!cameraRendered) {
+                let html5QrcodeScanner = new Html5QrcodeScanner(
+                    "reader",
+                    { 
+                        fps: 10, 
+                        qrbox: {width: 200, height: 200},
+                        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+                    },
+                    false);
+                html5QrcodeScanner.render(onScanSuccess, function(){});
+                cameraRendered = true;
+            }
+        });
+
+        document.getElementById('btn-mode-handheld').addEventListener('click', function() {
+            stepSetup.style.display = "none";
+            stepScan.style.display = "block";
+            cameraSection.style.display = "none";
+            handheldSection.style.display = "block";
+            
+            // Auto-focus the input box so the physical scanner works immediately
+            setTimeout(() => {
+                document.getElementById('manual-scan-input').focus();
+            }, 100);
+        });
+
+        document.getElementById('btn-back-setup').addEventListener('click', function() {
+            stepScan.style.display = "none";
+            stepSetup.style.display = "block";
+        });
 
         // Generate and Download TXT
         document.getElementById('download-txt').addEventListener('click', function() {
